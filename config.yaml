@@ -1,0 +1,4 @@
+data_path: /home
+face_ratio: 0.375
+init_IP: 192.168.2.10
+wifi_to_pc: false
