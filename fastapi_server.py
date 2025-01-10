@@ -52,6 +52,15 @@ device_settings = DeviceSettings(
     WiFi_format="",
     IP_addr="127.0.0.1",
     port=8000,
+    WiFi_mode=True,
+    PLC_mode=True,
+    Display_face=True,
+    Face_size_ratio=60,
+    Prevent_photo_auth=1,
+    Wifi_IP_addr="0.0.0.0",
+    Wifi_GatewayIP_addr="0.0.0.0",
+    Wifi_port=5555,
+    GatewayIP_addr="0.0.0.0",
 )
 
 delete_user_info = DeleteUserInfo(ID="0", User_ID="1234")

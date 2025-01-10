@@ -27,7 +27,7 @@ class DeviceSettings(BaseModel):
     PLC_mode: bool
     Display_face: bool
     Face_size_ratio: int
-    Prevent_photo_auth: bool
+    Prevent_photo_auth: int
     WiFi_ssid: Any
     WiFi_pw: Any
     WiFi_format: Any
