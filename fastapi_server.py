@@ -12,6 +12,7 @@ import logging
 import base64
 import csv
 from datetime import datetime
+import subprocess
 
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
@@ -100,7 +101,7 @@ async def get_log_file(ID: str, date: str, response: Response):
     except Exception as e:
         logging.error(f"Error processing request get {ID}: {e}")
         response.status_code = 500
-        return {"error": str(e), "result": 1}
+        return {"error": e, "result": 1}
 
 
 @app.get("/api/file")
@@ -112,20 +113,24 @@ async def get_file(ID: str, file_path: str):
 
 @app.get("/api/log/files")
 async def get_log_files(ID: str, file_list: list):
-    with tempfile.NamedTemporaryFile(suffix=".zip", delete=True) as temp_zip:
-        with zipfile.ZipFile(temp_zip.name, "w") as zipf:
-            for file in file_list:
-                if file.endswith(".log"):
-                    date, _ = os.path.splitext(file)
-                    file_name = os.path.join("dev-id_", date, ".log")
-                    LOG_DIR = os.path.join("logfiles", ID, "log")
-                    file_path = os.path.join(LOG_DIR, file_name)
-                    zipf.write(file_path, arcname=file_name)
-                else:
-                    IMAGE_DIR = os.path.join(ID, "image")
-                    file_path = os.path.join(IMAGE_DIR, file)
-                    zipf.write(file_path, arcname=file)
-        return FileResponse(temp_zip.name, filename=os.path.basename(temp_zip.name))
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".zip", delete=True) as temp_zip:
+            with zipfile.ZipFile(temp_zip.name, "w") as zipf:
+                for file in file_list:
+                    if file.endswith(".log"):
+                        date, _ = os.path.splitext(file)
+                        file_name = os.path.join("dev-id_", date, ".log")
+                        LOG_DIR = os.path.join("logfiles", ID, "log")
+                        file_path = os.path.join(LOG_DIR, file_name)
+                        zipf.write(file_path, arcname=file_name)
+                    else:
+                        IMAGE_DIR = os.path.join(ID, "image")
+                        file_path = os.path.join(IMAGE_DIR, file)
+                        zipf.write(file_path, arcname=file)
+            return {"files": FileResponse(temp_zip.name, filename=os.path.basename(temp_zip.name)), "result": 0}
+    except Exception as e:
+        logging.error(f"Error processing request get {ID}: {e}")
+        return {"error": e, "result": 1}
 
 
 # get and update network information
@@ -195,43 +200,47 @@ async def get_device_settings():
 
 # update and get user information
 @app.put("/api/users")
-async def update_user_info(new_info: UserInfo):
+async def update_user_info(new_infos: Any):
     global user_info, data_path
-    user_info = new_info
-    ID_folder_path = os.path.expanduser(os.path.join(data_path, user_info.ID))
-    User_ID_folder_path = os.path.join(ID_folder_path, "dataset", user_info.User_ID)
-    if not os.path.exists(User_ID_folder_path):
-        os.makedirs(User_ID_folder_path)
-    # save image
-    encoded_image = user_info.image
-    decoded_image = base64.b64decode(encoded_image)
+    try:
+        for new_info in new_infos:
+            user_info = new_info
+            ID_folder_path = os.path.expanduser(os.path.join(data_path, user_info.ID))
+            User_ID_folder_path = os.path.join(ID_folder_path, "dataset", user_info.User_ID)
+            if not os.path.exists(User_ID_folder_path):
+                os.makedirs(User_ID_folder_path)
+            # save image
+            encoded_image = user_info.image
+            decoded_image = base64.b64decode(encoded_image)
 
-    with open(os.path.join(User_ID_folder_path, user_info.User_ID) + ".jpg", "wb") as f:
-        f.write(decoded_image)
-    config_file = os.path.join(User_ID_folder_path, user_info.User_ID) + ".yaml"
-    user_info.image = os.path.join(User_ID_folder_path, user_info.User_ID) + ".jpg"
-    csv_file = os.path.join(ID_folder_path, "dataset", "users.csv")
-    csv_data = [
-        {
-            "User_ID": user_info.User_ID,
-            "Name": user_info.Name,
-            "RFID_code": user_info.RFID_code,
-            "Department": user_info.Department,
-            "Rank": user_info.Rank,
-        }
-    ]
-    save_to_csv(csv_file, csv_data)
-    if not os.path.exists(config_file):
-        with open(config_file, "w") as f:
-            yaml.dump(user_info.dict(), f)
-    else:
-        with open(config_file, "r") as f:
-            data = yaml.safe_load(f)
-            data.update(user_info.dict())
-        with open(config_file, "w") as file:
-            yaml.safe_dump(data, file)
+            with open(os.path.join(User_ID_folder_path, user_info.User_ID) + ".jpg", "wb") as f:
+                f.write(decoded_image)
+            config_file = os.path.join(User_ID_folder_path, user_info.User_ID) + ".yaml"
+            user_info.image = os.path.join(User_ID_folder_path, user_info.User_ID) + ".jpg"
+            csv_file = os.path.join(ID_folder_path, "dataset", "users.csv")
+            csv_data = [
+                {
+                    "User_ID": user_info.User_ID,
+                    "Name": user_info.Name,
+                    "RFID_code": user_info.RFID_code,
+                    "Department": user_info.Department,
+                    "Rank": user_info.Rank,
+                }
+            ]
+            save_to_csv(csv_file, csv_data)
+            if not os.path.exists(config_file):
+                with open(config_file, "w") as f:
+                    yaml.dump(user_info.dict(), f)
+            else:
+                with open(config_file, "r") as f:
+                    data = yaml.safe_load(f)
+                    data.update(user_info.dict())
+                with open(config_file, "w") as file:
+                    yaml.safe_dump(data, file)
 
-    return {"result": 0}
+        return {"result": 0}
+    except Exception as e:
+        return {"result": 1, "error": e}
 
 
 @app.get("/api/users", response_model=UserInfo)
@@ -240,7 +249,7 @@ async def get_user_info():
 
 
 # delete user information
-@app.put("/api/user")
+@app.put("/api/users/{ID}/{user_id}")
 async def delete_user_info(ID: str, User_ID: str):
     global data_path
     try:
@@ -250,10 +259,10 @@ async def delete_user_info(ID: str, User_ID: str):
             os.path.join(data_path, ID, "dataset", "users.csv")
         )
         csv_delete_row(csv_file, User_ID)
-    except Exception as e:
-        print(e)
-    finally:
         return {"result": 0}
+    except Exception as e:
+        print(f"Error deleting user data: {e}")
+        return {"result": 1, "error": e}  
 
 
 @app.put("/api/device")
@@ -263,11 +272,21 @@ async def delete_device_info(ID: str):
         ID_folder_path = os.path.expanduser(os.path.join(data_path, ID))
         shutil.rmtree(ID_folder_path)
         os.remove(os.path.expanduser(os.path.join(data_path, "config_" + ID + ".yaml")))
+        return {"result": 0}
     except Exception as e:
         print(e)
-    finally:
-        return {"result": 0}
+        return {"result": 1, "error": e}
 
+
+@app.put("/api/device/sync_clock")
+async def sync_clock(request: DeviceSyncRequest):
+    result = sync_device_clock(request.ID, request.Update_datetime)
+    return result
+
+@app.put("/api/device/reboot")
+async def reboot(ID: str):
+    result = {"result": 0}
+    return result
 
 def save_to_csv(file_name, new_data):
     file_exists = os.path.isfile(file_name)
@@ -324,6 +343,15 @@ def csv_delete_row(input_file, User_ID):
                 writer.writerow(row)
     shutil.move(temp_file.name, input_output_file)
 
+
+def sync_device_clock(ID: str, update_datetime: datetime):
+    try:
+        command = f"sudo date -s '{update_datetime.strftime('%Y-%m-%d %H:%M:%S')}'"
+        subprocess.run(command, shell=True, check=True)
+        return {"result": 0}  
+    except Exception as e:
+        print(f"Error syncing device clock: {e}")
+        return {"result": 1}  
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

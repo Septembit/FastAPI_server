@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Any
-
+from datetime import datetime
 
 class NetworkInfo(BaseModel):
     ID: str
@@ -23,11 +23,20 @@ class DeviceSettings(BaseModel):
     Duration: int
     Standby_time: int
     Lang: str
+    WiFi_mode: bool
+    PLC_mode: bool
+    Display_face: bool
+    Face_size_ratio: int
+    Prevent_photo_auth: bool
     WiFi_ssid: Any
     WiFi_pw: Any
     WiFi_format: Any
     IP_addr: str
+    GatewayIP_addr: str
     port: int
+    Wifi_IP_addr: str
+    Wifi_GatewayIP_addr: str
+    Wifi_port: int
 
 
 class UserInfo(BaseModel):
@@ -62,3 +71,8 @@ class ConnectStatusInfo(BaseModel):
 class DateInfo(BaseModel):
     ID: str
     date: str
+
+
+class DeviceSyncRequest(BaseModel):
+    ID: str
+    Update_datetime: datetime
