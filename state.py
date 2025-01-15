@@ -35,9 +35,6 @@ class DeviceSettings(BaseModel):
     GatewayIP_addr: str
     port: int
     Wifi_IP_addr: str
-    Wifi_GatewayIP_addr: str
-    Wifi_port: int
-
 
 class UserInfo(BaseModel):
     ID: str

@@ -58,8 +58,6 @@ device_settings = DeviceSettings(
     Face_size_ratio=60,
     Prevent_photo_auth=1,
     Wifi_IP_addr="0.0.0.0",
-    Wifi_GatewayIP_addr="0.0.0.0",
-    Wifi_port=5555,
     GatewayIP_addr="0.0.0.0",
 )
 
