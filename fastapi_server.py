@@ -21,7 +21,7 @@ data_path = config["data_path"]
 
 # Initial data
 network_info = NetworkInfo(
-    ID="0", IP_addr="127.0.0.1", port=8000, WiFi_ssid="", WiFi_pw="", WiFi_format=""
+    ID="0", IP_addr="127.0.0.1", port="8000", WiFi_ssid="", WiFi_pw="", WiFi_format=""
 )
 
 user_info = UserInfo(
@@ -51,7 +51,7 @@ device_settings = DeviceSettings(
     WiFi_pw="",
     WiFi_format="",
     IP_addr="127.0.0.1",
-    port=8000,
+    port="8000",
     WiFi_mode=True,
     PLC_mode=True,
     Display_face=True,

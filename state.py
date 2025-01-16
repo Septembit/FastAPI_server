@@ -33,7 +33,7 @@ class DeviceSettings(BaseModel):
     WiFi_format: Any
     IP_addr: str
     GatewayIP_addr: str
-    port: int
+    port: str
     Wifi_IP_addr: str
 
 class UserInfo(BaseModel):
