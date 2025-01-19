@@ -256,7 +256,7 @@ async def get_user_info():
 
 
 # delete user information
-@app.put("/api/users/{ID}/{user_id}")
+@app.put("/api/users_delete")
 async def delete_user_info(ID: str, User_ID: str):
     global data_path
     try:
