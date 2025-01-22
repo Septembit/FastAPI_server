@@ -257,8 +257,10 @@ async def get_user_info():
 
 # delete user information
 @app.put("/api/users_delete")
-async def delete_user_info(ID: str, User_ID: str):
+async def delete_user_info(delete_user: DeleteUserInfo):
     global data_path
+    ID = delete_user.ID
+    User_ID = delete_user.User_ID
     try:
         user_path = os.path.expanduser(os.path.join(data_path, ID, "dataset", User_ID))
         shutil.rmtree(user_path)
@@ -273,8 +275,9 @@ async def delete_user_info(ID: str, User_ID: str):
 
 
 @app.put("/api/device")
-async def delete_device_info(ID: str):
+async def delete_device_info(device_ID: DeleteDeviceInfo):
     global data_path
+    ID = device_ID.ID
     try:
         ID_folder_path = os.path.expanduser(os.path.join(data_path, ID))
         shutil.rmtree(ID_folder_path)
@@ -291,7 +294,8 @@ async def sync_clock(request: DeviceSyncRequest):
     return result
 
 @app.put("/api/device/reboot")
-async def reboot(ID: str):
+async def reboot(device_ID: DeleteDeviceInfo):
+    ID = device_ID.ID
     result = {"result": 0}
     return result
 
