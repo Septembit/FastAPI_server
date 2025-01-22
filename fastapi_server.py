@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, Query
 import uvicorn
 import shutil
 import os
@@ -93,13 +93,13 @@ async def update_device_status(new_connect: ConnectStatusInfo):
 
 
 @app.get("/api/device/status")
-async def get_device_status(ID: str):
+async def get_device_status(ID: str = Query(...)):
     return {"result": 0}
 
 
 # upload and get log files.
 @app.get("/api/log/list")
-async def get_log_file(ID: str, date: str, response: Response):
+async def get_log_file(ID: str = Query(...), date: str = Query(...), response: Response):
     global data_path
     LOG_DIR = os.path.expanduser(os.path.join(data_path, ID, "log"))
     try:
@@ -112,14 +112,14 @@ async def get_log_file(ID: str, date: str, response: Response):
 
 
 @app.get("/api/file")
-async def get_file(ID: str, file_path: str):
+async def get_file(ID: str = Query(...), file_path: str = Query(...)):
     global data_path
     file_path = os.path.expanduser(os.path.join(data_path, ID, "log", file_path))
     return FileResponse(file_path)
 
 
 @app.get("/api/log/files")
-async def get_log_files(ID: str, file_list: list):
+async def get_log_files(ID: str = Query(...), file_list: list = Query(...)):
     try:
         with tempfile.NamedTemporaryFile(suffix=".zip", delete=True) as temp_zip:
             with zipfile.ZipFile(temp_zip.name, "w") as zipf:
@@ -207,7 +207,8 @@ async def get_device_settings():
 
 # update and get user information
 @app.put("/api/users")
-async def update_user_info(new_infos: Any):
+async def update_user_info(new_infos: list[UserInfo]):
+    global data_path
     global user_info, data_path
     try:
         for new_info in new_infos:
