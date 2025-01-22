@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Response, Query
+from fastapi import FastAPI, Query
 import uvicorn
 import shutil
 import os
@@ -99,7 +99,7 @@ async def get_device_status(ID: str = Query(...)):
 
 # upload and get log files.
 @app.get("/api/log/list")
-async def get_log_file(ID: str = Query(...), date: str = Query(...), response: Response):
+async def get_log_file(ID: str = Query(...), date: str = Query(...)):
     global data_path
     LOG_DIR = os.path.expanduser(os.path.join(data_path, ID, "log"))
     try:
@@ -107,7 +107,6 @@ async def get_log_file(ID: str = Query(...), date: str = Query(...), response: R
         return {"filename": filenames, "result": 0}
     except Exception as e:
         logging.error(f"Error processing request get {ID}: {e}")
-        response.status_code = 500
         return {"error": e, "result": 1}
 
 
