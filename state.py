@@ -72,4 +72,4 @@ class DateInfo(BaseModel):
 
 class DeviceSyncRequest(BaseModel):
     ID: str
-    Update_datetime: datetime
+    Update_datetime: str

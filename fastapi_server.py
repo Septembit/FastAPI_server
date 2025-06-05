@@ -1,18 +1,20 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 import uvicorn
 import shutil
 import os
 from fastapi.responses import FileResponse
 import argparse
 import tempfile
-import zipfile
+from dateutil import parser
 import yaml
 from state import *
 import logging
 import base64
 import csv
-from datetime import datetime
+from datetime import datetime, timedelta
 import subprocess
+from fastapi.middleware.cors import CORSMiddleware
+from typing import Dict
 
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
@@ -24,16 +26,6 @@ network_info = NetworkInfo(
     ID="0", IP_addr="127.0.0.1", port="8000", WiFi_ssid="", WiFi_pw="", WiFi_format=""
 )
 
-user_info = UserInfo(
-    ID="0",
-    User_ID="1234",
-    RFID_code="12",
-    Name="David",
-    Department="123",
-    Rank=1,
-    Enabled=True,
-    image="qerwe",
-)
 
 device_settings = DeviceSettings(
     ID="0",
@@ -68,9 +60,17 @@ delete_device_info = DeleteDeviceInfo(
 )
 alive_status_info = AliveStatusInfo(alive=True)
 connect_status_info = ConnectStatusInfo(ID="0", status=True)
+
+
 app = FastAPI()
-
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  
+    allow_credentials=True,
+    allow_methods=["*"],  
+    allow_headers=["*"],  
+)
+    
 # update and get alive status
 @app.put("/api/device/alive")
 async def update_alive_status(new_alive: AliveStatusInfo):
@@ -119,21 +119,18 @@ async def get_file(ID: str = Query(...), file_path: str = Query(...)):
 
 @app.get("/api/log/files")
 async def get_log_files(ID: str = Query(...), file_list: list = Query(...)):
+    global data_path
     try:
-        with tempfile.NamedTemporaryFile(suffix=".zip", delete=True) as temp_zip:
-            with zipfile.ZipFile(temp_zip.name, "w") as zipf:
-                for file in file_list:
-                    if file.endswith(".log"):
-                        date, _ = os.path.splitext(file)
-                        file_name = os.path.join("dev-id_", date, ".log")
-                        LOG_DIR = os.path.join("logfiles", ID, "log")
-                        file_path = os.path.join(LOG_DIR, file_name)
-                        zipf.write(file_path, arcname=file_name)
-                    else:
-                        IMAGE_DIR = os.path.join(ID, "image")
-                        file_path = os.path.join(IMAGE_DIR, file)
-                        zipf.write(file_path, arcname=file)
-            return {"files": FileResponse(temp_zip.name, filename=os.path.basename(temp_zip.name)), "result": 0}
+        fileresponse_list = []
+        data_list = []
+        LOG_DIR = os.path.expanduser(os.path.join(data_path, ID, "log"))
+        for file in file_list:
+            file_path = os.path.expanduser(os.path.join(LOG_DIR, file))
+            fileresponse_list.append(FileResponse(file_path))
+            with open(file_path, "rb") as f:
+                data_list.append({"filename": file, "data": f.read()})  
+
+        return {"files": data_list, "result": 0}
     except Exception as e:
         logging.error(f"Error processing request get {ID}: {e}")
         return {"error": e, "result": 1}
@@ -208,11 +205,39 @@ async def get_device_settings():
 @app.put("/api/users")
 async def update_user_info(new_infos: list[UserInfo]):
     global data_path
-    global user_info, data_path
+    try:
+        items = os.listdir(os.path.expanduser(data_path))
+        folders = [item for item in items if os.path.isdir(os.path.join(data_path, item))]
+        if len(folders) == 1:
+            # Return the path of the only folder
+            ID_folder_path =  os.path.join(os.path.expanduser(data_path), folders[0])
+    except Exception as e:
+        return {"result": 1, "error": e}
+    
+    # encodings_file_path = os.path.join(ID_folder_path, 'encodings.pkl')
+
+    # if os.path.exists(encodings_file_path):
+    # # If the file exists, create an empty 'ecodings.pkl'
+    #     with open(encodings_file_path, 'wb') as f:
+    #         pass 
+    dataset_path = os.path.join(ID_folder_path, "dataset")
+    if os.path.exists(dataset_path):
+        # Iterate over all files and directories in "dataset" and delete them
+        for item in os.listdir(dataset_path):
+            item_path = os.path.join(dataset_path, item)
+            if os.path.isdir(item_path):
+                shutil.rmtree(item_path)  # Remove subdirectories
+            else:
+                os.remove(item_path)  # Remove files
+    
+    csv_file = os.path.join(ID_folder_path, "dataset", "users.csv")
+    fieldnames = ["User_ID", "Name", "RFID_code", "Department", "Rank"]
+    with open(csv_file, mode="w", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
     try:
         for new_info in new_infos:
             user_info = new_info
-            ID_folder_path = os.path.expanduser(os.path.join(data_path, user_info.ID))
             User_ID_folder_path = os.path.join(ID_folder_path, "dataset", user_info.User_ID)
             if not os.path.exists(User_ID_folder_path):
                 os.makedirs(User_ID_folder_path)
@@ -224,7 +249,7 @@ async def update_user_info(new_infos: list[UserInfo]):
                 f.write(decoded_image)
             config_file = os.path.join(User_ID_folder_path, user_info.User_ID) + ".yaml"
             user_info.image = os.path.join(User_ID_folder_path, user_info.User_ID) + ".jpg"
-            csv_file = os.path.join(ID_folder_path, "dataset", "users.csv")
+            
             csv_data = [
                 {
                     "User_ID": user_info.User_ID,
@@ -252,7 +277,7 @@ async def update_user_info(new_infos: list[UserInfo]):
 
 @app.get("/api/users", response_model=UserInfo)
 async def get_user_info():
-    return user_info
+    return {"result": 0}
 
 
 # delete user information
@@ -296,6 +321,7 @@ async def sync_clock(request: DeviceSyncRequest):
 @app.put("/api/device/reboot")
 async def reboot(device_ID: DeleteDeviceInfo):
     ID = device_ID.ID
+    subprocess.run(["sudo", "reboot"], check=True)
     result = {"result": 0}
     return result
 
@@ -327,6 +353,9 @@ def save_to_csv(file_name, new_data):
 
 def get_files_after_date(folder_path, date_str):
     target_date = datetime.strptime(date_str, "%Y-%m-%d")
+    if target_date != datetime.strptime("0001-01-01", "%Y-%m-%d"):
+        target_date = target_date - timedelta(days=2)
+
     log_files = [
         f
         for f in os.listdir(folder_path)
@@ -336,7 +365,6 @@ def get_files_after_date(folder_path, date_str):
     result_files = [
         f for f in log_files if datetime.strptime(f[:-4], "%Y-%m-%d") >= target_date
     ]
-
     return result_files
 
 
@@ -355,9 +383,12 @@ def csv_delete_row(input_file, User_ID):
     shutil.move(temp_file.name, input_output_file)
 
 
-def sync_device_clock(ID: str, update_datetime: datetime):
+def sync_device_clock(ID: str, iso_datetime: str):
     try:
-        command = f"sudo date -s '{update_datetime.strftime('%Y-%m-%d %H:%M:%S')}'"
+        update_datetime = parser.isoparse(iso_datetime)
+        formatted_time = update_datetime.strftime('%Y-%m-%d %H:%M:%S')
+
+        command = f"sudo timedatectl set-time  '{formatted_time}'"
         subprocess.run(command, shell=True, check=True)
         return {"result": 0}  
     except Exception as e:
