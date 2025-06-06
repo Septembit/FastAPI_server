@@ -15,16 +15,16 @@ class DeviceSettings(BaseModel):
     ID: str
     PLC_IP_addr: Any
     Log_level: int
-    Enable: bool
+    # Enable: bool
     Location: Any
     GPIO_mode: bool
     Camera_orien: int
     Threshold: int
     Duration: int
     Standby_time: int
-    Lang: str
+    # Lang: str
     WiFi_mode: bool
-    PLC_mode: bool
+    # PLC_mode: bool
     Display_face: bool
     Face_size_ratio: int
     Prevent_photo_auth: int
@@ -43,7 +43,7 @@ class UserInfo(BaseModel):
     Name: str
     Department: Any
     Rank: int
-    Enabled: bool
+    # Enabled: bool
     image: Any
 
 
